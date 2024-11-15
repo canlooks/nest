@@ -1,5 +1,5 @@
 import {ClassType} from '..'
-import {instance_pendingInitialising, getValueAssignDefault, registerComponent, registerDecorator} from './utils'
+import {instance_pendingInitialising, getMapValue, registerComponent, registerDecorator} from './utils'
 
 /**
  * 方法修饰器，被修饰的方法会在组件初始化时执行
@@ -11,7 +11,7 @@ export function Initialize(a?: any, b?: any, c?: any) {
         registerDecorator(prototype, instance => {
             const pending = instance[property]()
             // 记录返回值，用于whenReady()
-            getValueAssignDefault(instance_pendingInitialising, instance, () => []).push(pending)
+            getMapValue(instance_pendingInitialising, instance, () => []).push(pending)
         })
     }
     return c ? fn(a, b, c) : fn

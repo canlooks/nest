@@ -11,8 +11,8 @@
   "module": "dist/esm/index.js",
   "types": "index.d.ts",
   "browser": {
-    "./dist/cjs/index.js": "./dist-browser/cjs/index.js",
-    "./dist/esm/index.js": "./dist-browser/esm/index.js"
+    "./dist/cjs/index.js": "./dist/cjs/index.browser.js",
+    "./dist/esm/index.js": "./dist/esm/index.browser.js"
   },
   "exports": {
     ".": {
@@ -43,7 +43,6 @@
     "tslib": "^2.8.0"
   },
   "devDependencies": {
-    "@canlooks/tscup": "^0.0.8",
     "shx": "^0.3.4",
     "ts-node": "^10.9.2",
     "typescript": "^5.6.3"

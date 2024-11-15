@@ -1,8 +1,9 @@
 declare namespace Nest {
     type Dict<T = any> = {[P: PropertyKey]: T}
     type ClassType<T = any> = new (...args: any[]) => T
-
-    type ModularizedComponents  = ClassType[] | Dict<ClassType | ClassType[]>
+    type Instances<T> = {
+        [K in keyof T]: T[K] extends ClassType<infer I> ? I : never
+    }
 
     class Nest {
         /**
@@ -14,16 +15,12 @@ declare namespace Nest {
 
         /**
          * 创建应用
-         * @param component 入口组件（单个）
+         * @param component 入口组件
          */
         static create<T>(component: ClassType<T>): Promise<T>
-        /**
-         * 创建应用
-         * @param {ClassType | Array | Object} components 入口组件（多个）
-         * 对象形式可传入任意语义化键名，如
-         * @example Nest.create( { 'user': UserComponent, 'auth': [AuthComponent, AuthComponent2] } )
-         */
-        static create(components: ModularizedComponents): Promise<any[]>
+        static create<T extends ClassType[]>(components: T): Promise<Instances<T>>
+        static create<T extends ClassType[]>(...components: T): Promise<Instances<T>>
+        static create<T extends Dict<ClassType>>(components: T): Promise<Instances<T>>
     }
 
     /**
@@ -31,13 +28,16 @@ declare namespace Nest {
      * @param component 传入单个组件
      */
     function Module(component: ClassType): ClassDecorator
+
+    type StructuredComponents = ClassType | ClassType[] | Dict<ClassType>
+
     /**
      * 类修饰器，被修饰的组件当作一个模块
      * @param {Array | Object} components 传入单个或数组、对象形式的组件集合，这些组件会同module组件一起初始化
      * 对象形式可传入任意语义化键名，如
      * @example Module( { 'user': UserComponent, 'auth': [AuthComponent, AuthComponent2] } )
      */
-    function Module(components: ModularizedComponents): ClassDecorator
+    function Module(components: StructuredComponents): ClassDecorator
 
     /**
      * 方法修饰器，被修饰的方法会在组件初始化时执行
@@ -210,8 +210,8 @@ declare namespace Nest {
     function commonParameterDecorator(map: WeakMap<object, Map<PropertyKey, number>>): ParameterDecorator
 
     /** @private 获取Map的值，找不到时赋上默认值 */
-    export function getValueAssignDefault<K, V>(data: Map<K, V>, key: K, defaultValue: () => V): V
-    export function getValueAssignDefault<K extends object, V>(map: WeakMap<K, V>, key: K, defaultValue: () => V): V
+    export function getMapValue<K, V>(data: Map<K, V>, key: K, defaultValue: () => V): V
+    export function getMapValue<K extends object, V>(map: WeakMap<K, V>, key: K, defaultValue: () => V): V
 
     type MethodDecoratorCallback = (instance: any, ...args: any[]) => any
 
@@ -228,10 +228,10 @@ declare namespace Nest {
 
     type PluginDefinition<O = any> = {
         options?: O
-        setOptions?(options: O): void
+        setOptions?(options: Partial<O>): void
         onAppCreate?(): any
         onControllerRegister?(): void
-        onActionCall?(pattern: string, ...args: any[]): any
+        onActionCall?(pattern: Pattern, ...args: any[]): any
     }
 
     /**

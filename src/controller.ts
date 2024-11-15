@@ -1,9 +1,10 @@
 import {ClassType, Pattern, RouteItem} from '..'
-import {getValueAssignDefault, registerComponent, registerDecorator, simplifyPattern} from './utils'
+import {getMapValue, registerComponent, registerDecorator, simplifyPattern} from './utils'
+import {implementPluginCallback} from './plugin'
 
 export const routeMap = new Map<Pattern, RouteItem>()
 
-const prototype_routeItem = new WeakMap<Object, RouteItem>()
+const prototype_routeItem = new WeakMap<object, RouteItem>()
 
 export function Controller(target: ClassType): void
 export function Controller(pattern?: Pattern): ClassDecorator
@@ -11,7 +12,7 @@ export function Controller(a?: any) {
     const fn = (pattern?: Pattern) => (target: ClassType) => {
         registerDecorator(target.prototype, (instance, isSubController: symbol) => {
             const routeItem: RouteItem = {children: new Map()}
-            // 非@SubController()注册的控制器均添加至路由表顶层
+            // 由@SubController()注册的控制器无需添加至路由表
             isSubController !== IS_SUB_CONTROLLER && routeMap.set(simplifyPattern(pattern ?? target.name), routeItem)
             prototype_routeItem.set(target.prototype, routeItem)
             // 当前控制器
@@ -31,7 +32,7 @@ export function Controller(a?: any) {
             if (property_subRouteMap) {
                 for (const [property, subRouteMap] of property_subRouteMap) {
                     for (const [pattern, {children}] of subRouteMap) {
-                        const targetRoute = getValueAssignDefault(routeItem.children, pattern, () => ({
+                        const targetRoute = getMapValue(routeItem.children, pattern, () => ({
                             prototype: target.prototype,
                             property,
                             children: new Map()
@@ -41,12 +42,14 @@ export function Controller(a?: any) {
                     }
                 }
             }
+
+            implementPluginCallback('onControllerRegister')
         })
     }
     return typeof a === 'function' ? fn()(a) : fn(a)
 }
 
-const prototype_property_actionItem = new WeakMap<Object, Map<PropertyKey, {
+const prototype_property_actionItem = new WeakMap<object, Map<PropertyKey, {
     pattern: Pattern
     fn: Function
 }>>()
@@ -55,7 +58,7 @@ export function Action(prototype: Object, property: PropertyKey, descriptor: Typ
 export function Action(pattern?: Pattern): MethodDecorator
 export function Action(a?: any, b?: any, c?: any): any {
     const fn = (pattern?: Pattern) => (prototype: Object, property: PropertyKey, descriptor: TypedPropertyDescriptor<any>) => {
-        getValueAssignDefault(prototype_property_actionItem, prototype, () => new Map()).set(property, {
+        getMapValue(prototype_property_actionItem, prototype, () => new Map()).set(property, {
             pattern: simplifyPattern(pattern ?? property.toString()),
             fn: descriptor.value
         })
@@ -65,7 +68,7 @@ export function Action(a?: any, b?: any, c?: any): any {
 
 const IS_SUB_CONTROLLER = Symbol('IS_SUB_CONTROLLER')
 
-const prototype_property_subRouteMap = new WeakMap<Object, Map<PropertyKey, Map<Pattern, RouteItem>>>()
+const prototype_property_subRouteMap = new WeakMap<object, Map<PropertyKey, Map<Pattern, RouteItem>>>()
 
 export function SubController(controller: ClassType): PropertyDecorator
 export function SubController(controller: ClassType): MethodDecorator
@@ -81,11 +84,13 @@ export function SubController(a: any, b?: any) {
                     throw Error(`[@canlooks/nest] SubController "${controller.name}" must be decorated by @Controller`)
                 }
                 // pattern优先使用@SubController的指定，其次使用@Action的指定，最后使用属性名
-                pattern ??= prototype_property_actionItem.get(prototype)?.get(property)?.pattern ?? simplifyPattern(property.toString())
+                pattern = pattern
+                    ? simplifyPattern(pattern)
+                    : prototype_property_actionItem.get(prototype)?.get(property)?.pattern ?? simplifyPattern(property.toString())
                 
-                const property_subRouteMap = getValueAssignDefault(prototype_property_subRouteMap, prototype, () => new Map())
-                getValueAssignDefault(property_subRouteMap, property, () => new Map()).set(pattern, subRouteItem)
-
+                const property_subRouteMap = getMapValue(prototype_property_subRouteMap, prototype, () => new Map())
+                getMapValue(property_subRouteMap, property, () => new Map()).set(pattern, subRouteItem)
+                
                 if (!descriptor) {
                     // descriptor为undefined，表示@SubController当作属性修饰器，需要实现Inject功能
                     instance[property] = subInstance

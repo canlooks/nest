@@ -1,9 +1,9 @@
-import {ClassType, Dict, ModularizedComponents, Pattern, PatternObject} from '..'
+import {ClassType, Dict, StructuredComponents, Pattern, PatternObject} from '..'
 import {Container} from './container'
 
 /**
  * 创建类的单例，接管new方法
- * @param Component 
+ * @param Component
  * @param args 传递给MethodDecoratorCallback {@link MethodDecoratorCallback}
  */
 export function registerComponent<T>(Component: ClassType<T>, ...args: any[]): T {
@@ -20,10 +20,10 @@ export function registerComponent<T>(Component: ClassType<T>, ...args: any[]): T
 }
 
 /**
- * 结构单一组件或数组、对象形式的组件集合
- * @param components 
+ * 解构各种形式的组件集合
+ * @param components
  */
-export async function destructureComponentModule(components: ClassType | ModularizedComponents) {
+export async function destructureComponentModule(components: StructuredComponents) {
     if (typeof components === 'function') {
         // 单个组件
         const instance = registerComponent(components)
@@ -32,28 +32,19 @@ export async function destructureComponentModule(components: ClassType | Modular
     }
 
     // 多个组件
-    const classes: ClassType[] = []
-    const fn = (components: ModularizedComponents) => {
-        if (Array.isArray(components)) {
-            return components.map(c => {
-                classes.push(c)
-                return registerComponent(c)
-            })
-        }
-        const ret: Dict = {}
-        for (const k in components) {
-            const c = components[k]
-            if (Array.isArray(c)) {
-                ret[k] = fn(c)
-            } else {
-                classes.push(c)
-                ret[k] = registerComponent(c)
-            }
-        }
-        return ret
+    if (Array.isArray(components)) {
+        return await Promise.all(
+            components.map(c => registerComponent(c))
+        )
     }
-    const instances = fn(components)
-    await Promise.all(classes.map(whenReady))
+    const promises: Promise<any>[] = []
+    const instances: Dict = {}
+    for (const k in components) {
+        const c = components[k]
+        promises.push(whenReady(c))
+        instances[k] = registerComponent(c)
+    }
+    await Promise.all(promises)
     return instances
 }
 
@@ -63,16 +54,16 @@ const prototype_registeredMethods = new WeakMap<object, MethodDecoratorCallback[
 
 /**
  * 注册方法修饰器
- * @param prototype 
+ * @param prototype
  * @param callback
  */
 export function registerDecorator(prototype: object, callback: MethodDecoratorCallback): void {
-    getValueAssignDefault(prototype_registeredMethods, prototype, () => []).push(callback)
+    getMapValue(prototype_registeredMethods, prototype, () => []).push(callback)
 }
 
 /**
  * 执行方法修饰器
- * @param prototype 
+ * @param prototype
  * @param instance
  * @param args 传递给MethodDecoratorCallback {@link MethodDecoratorCallback}
  */
@@ -89,7 +80,7 @@ export const instance_pendingInitialising = new WeakMap<object, any[]>()
 
 /**
  * 传入组件静态类或实例，得到组件的初始化函数的返回值
- * @param component 
+ * @param component
  * @returns {Promise<any[]>} 返回一个数组，因为Initialize方法可能有多个
  */
 export function whenReady(component: ClassType | object): Promise<any[]> {
@@ -102,7 +93,7 @@ export function whenReady(component: ClassType | object): Promise<any[]> {
 /**
  * 获取组件初始化函数的返回值
  * @alias whenReady {@link whenReady}
- * @param component 
+ * @param component
  */
 export function getInitialValue(component: ClassType | object) {
     return whenReady(component)
@@ -114,9 +105,9 @@ export function getInitialValue(component: ClassType | object) {
  * @param key
  * @param defaultValue
  */
-export function getValueAssignDefault<K, V>(data: Map<K, V>, key: K, defaultValue: () => V): V
-export function getValueAssignDefault<K extends object, V>(map: WeakMap<K, V>, key: K, defaultValue: () => V): V
-export function getValueAssignDefault(map: any, key: any, defaultValue: () => any) {
+export function getMapValue<K, V>(data: Map<K, V>, key: K, defaultValue: () => V): V
+export function getMapValue<K extends object, V>(map: WeakMap<K, V>, key: K, defaultValue: () => V): V
+export function getMapValue(map: any, key: any, defaultValue: () => any) {
     if (map.has(key)) {
         return map.get(key)!
     }
@@ -127,9 +118,9 @@ export function getValueAssignDefault(map: any, key: any, defaultValue: () => an
 
 /**
  * 得到所有属性的描述符，包括被继承的父类
- * @param o 
+ * @param o
  */
-export function getAllPropertyDescriptors(o: any): {[p: PropertyKey]: PropertyDescriptor} {
+export function getAllPropertyDescriptors(o: any): { [p: PropertyKey]: PropertyDescriptor } {
     const {constructor, ...desc} = Object.getOwnPropertyDescriptors(o)
     const prototype = Object.getPrototypeOf(o)
     if (prototype !== Object.prototype && prototype !== Array.prototype && prototype !== Function.prototype) {
@@ -143,7 +134,7 @@ export function getAllPropertyDescriptors(o: any): {[p: PropertyKey]: PropertyDe
 
 /**
  * 用于区分class与function
- * @param fn 
+ * @param fn
  */
 export function isClass(fn: Function | ClassType): fn is ClassType {
     if (fn.prototype?.constructor !== fn) {
@@ -152,9 +143,13 @@ export function isClass(fn: Function | ClassType): fn is ClassType {
     return /^class/.test(fn.toString())
 }
 
+/**
+ * 通用的参数修饰器处理方法
+ * @param map
+ */
 export function commonParameterDecorator(map: WeakMap<object, Map<PropertyKey, number>>) {
     return (prototype: Object, property: PropertyKey | undefined, index: number) => {
-        typeof property !== 'undefined' && getValueAssignDefault(map, prototype, () => new Map()).set(property, index)
+        typeof property !== 'undefined' && getMapValue(map, prototype, () => new Map()).set(property, index)
     }
 }
 
@@ -165,7 +160,7 @@ export function commonParameterDecorator(map: WeakMap<object, Map<PropertyKey, n
 
 /**
  * 简化字符串形式的pattern，去掉分隔符，统一成小写
- * @param pattern 
+ * @param pattern
  */
 export function simplifyPattern<T extends Pattern>(pattern: T): T {
     if (typeof pattern === 'string') {
@@ -175,20 +170,14 @@ export function simplifyPattern<T extends Pattern>(pattern: T): T {
 }
 
 /**
- * 全部统一使用"/"
- * @param path
- */
-export function unifySlash(path: string) {
-    return path.replace(/\\/g, '/')
-}
-
-/**
  * 统一path格式，统一使用"/"；选择性以"/"开头，且末尾无"/"
  * @param path
  * @param endWithSlash 是否以"/"开头，默认为true
  */
 export function unifyPath(path: string, endWithSlash = true) {
-    return unifySlash(path)
+    return path
+        // 统一使用"/"
+        .replace(/\\/g, '/')
         // 去掉末尾的"/"
         .replace(/\/+$/, '')
         // 如果没有以"/"开头，则选择性加上"/"
@@ -246,7 +235,7 @@ export function truncatePath(fullPath: string, truncation: string | undefined): 
  * 判断pattern的包含关系
  * @param referenceObj 完整的对象
  * @param obj 子对象
- * @returns {PatternObject | null} 返回剩余的未匹配的属性，如果全部匹配则返回null
+ * @returns {PatternObject | null} 返回剩余的未匹配的属性，匹配失败返回null
  */
 export function shallowContain(referenceObj: PatternObject, obj: PatternObject): PatternObject | null {
     const objKeys = Object.keys(obj)
@@ -261,4 +250,20 @@ export function shallowContain(referenceObj: PatternObject, obj: PatternObject):
         delete restObj[k]
     }
     return restObj
+}
+
+/**
+ * 合并pattern
+ * @param patterns
+ */
+export function joinPattern(...patterns: Pattern[]) {
+    return patterns.reduce((prev, current) => {
+        if (typeof prev === 'string' && typeof current === 'string') {
+            return `${unifyPath(prev)}/${unifyPath(current, false)}`
+        }
+        if (typeof prev === 'object' && typeof current === 'object') {
+            return {...current, ...prev}
+        }
+        throw TypeError('Invalid pattern')
+    })
 }

@@ -1,4 +1,4 @@
-import {ClassType, Dict, ModularizedComponents, PluginDefinition} from '..'
+import {ClassType, Dict, Instances, PluginDefinition} from '..'
 import {implementPluginCallback, usePlugin} from './plugin'
 import {destructureComponentModule} from './utils'
 
@@ -6,14 +6,16 @@ export class Nest {
     private static created = false
 
     static async create<T>(component: ClassType<T>): Promise<T>
-    static async create(components: ModularizedComponents): Promise<any[] | Dict>
-    static async create(a: ClassType | ModularizedComponents) {
+    static async create<T extends ClassType[]>(components: T): Promise<Instances<T>>
+    static async create<T extends ClassType[]>(...components: T): Promise<Instances<T>>
+    static async create<T extends Dict<ClassType>>(components: T): Promise<Instances<T>>
+    static async create(...a: any[]) {
         if (this.created) {
             throw Error('[@canlooks/nest] Cannot run create() twice')
         }
         this.created = true
         await Promise.all(implementPluginCallback('onAppCreate'))
-        return destructureComponentModule(a)
+        return destructureComponentModule(a.length > 1 ? a : a[0])
     }
 
     static use<O>(plugin: PluginDefinition<O> | ClassType, options?: O): typeof Nest {

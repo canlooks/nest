@@ -1,6 +1,6 @@
 import {ClassType, MiddlewareFunction, MiddlewareItem} from '..'
 import {Exception} from './exception'
-import {getAllPropertyDescriptors, getValueAssignDefault, isClass, registerComponent, registerDecorator} from './utils'
+import {getAllPropertyDescriptors, getMapValue, isClass, registerComponent, registerDecorator} from './utils'
 
 const instance_middlewareProviderSet = new Map<Function, Set<MiddlewareFunction>>()
 
@@ -9,7 +9,7 @@ export function Provide(prototype: Object, property: PropertyKey, descriptor: Ty
 export function Provide(a?: any, b?: any, c?: any): any {
     const fn = (prototype: Object, property: PropertyKey, descriptor: TypedPropertyDescriptor<MiddlewareFunction>) => {
         registerDecorator(prototype, instance => {
-            getValueAssignDefault(instance_middlewareProviderSet, instance, () => new Set())
+            getMapValue(instance_middlewareProviderSet, instance, () => new Set())
                 .add(instance[property].bind(instance))
         })
     }

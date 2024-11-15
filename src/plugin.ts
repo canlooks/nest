@@ -1,5 +1,5 @@
 import {ClassType, PluginDefinition} from '..'
-import {getValueAssignDefault, registerComponent, registerDecorator} from './utils'
+import {getMapValue, registerComponent, registerDecorator} from './utils'
 
 const instance_pluginDefinition = new WeakMap<object, PluginDefinition>()
 
@@ -45,7 +45,7 @@ const instance_definition = new WeakMap<object, PluginDefinition>()
 function commonDefinitionDecorator(type: keyof PluginDefinition) {
     return (prototype: Object, property: PropertyKey, descriptor: TypedPropertyDescriptor<any>) => {
         registerDecorator(prototype, instance => {
-            getValueAssignDefault(instance_definition, instance, () => ({} as PluginDefinition))[type] = instance[property]
+            getMapValue(instance_definition, instance, () => ({} as PluginDefinition))[type] = instance[property]
         })
     }
 }
@@ -68,6 +68,13 @@ export function OnControllerRegister(prototype: Object, property: PropertyKey, d
 export function OnControllerRegister(): MethodDecorator
 export function OnControllerRegister(a?: any, b?: any, c?: any): any {
     const decorator = commonDefinitionDecorator('onControllerRegister')
+    return c ? decorator(a, b, c) : decorator
+}
+
+export function OnActionCall(prototype: Object, property: PropertyKey, descriptor: TypedPropertyDescriptor<any>): void
+export function OnActionCall(): MethodDecorator
+export function OnActionCall(a?: any, b?: any, c?: any): any {
+    const decorator = commonDefinitionDecorator('onActionCall')
     return c ? decorator(a, b, c) : decorator
 }
 

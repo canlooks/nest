@@ -1,2 +1,2 @@
-export * from './app.browser'
+export * from './app'
 export * from './controller.browser'
