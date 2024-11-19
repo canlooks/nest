@@ -85,25 +85,30 @@ export function OnActionCall(a?: any, b?: any, c?: any): any {
 
 const usingPluginSet = new Set<PluginDefinition>()
 
-export function usePlugin<O>(plugin: PluginDefinition<O> | ClassType, options?: O) {
-    const pluginInstance = registerPlugin(plugin)
-    usingPluginSet.add(pluginInstance)
-    options && pluginInstance.setOptions?.(options)
+export function usePlugin<O>(plugin: PluginDefinition<O> | ClassType, options?: Partial<O>) {
+    const pluginDefinition = registerPlugin(plugin)
+    usingPluginSet.add(pluginDefinition)
+    options && pluginDefinition.setOptions?.(options)
 }
+
+const pluginDefinition_instance = new WeakMap<PluginDefinition, any>()
 
 /**
  * 统一class与对象形式的插件
- * @param plugin 
+ * @param plugin
  */
 function registerPlugin(plugin: PluginDefinition | ClassType): PluginDefinition {
     if (typeof plugin === 'function') {
+        // class类型的插件
         const instance = registerComponent(plugin)
-        const ret = instance_pluginDefinition.get(instance)
-        if (!ret) {
+        const pluginDefinition = instance_pluginDefinition.get(instance)
+        if (!pluginDefinition) {
             throw TypeError(`[@canlooks/nest] Plugin class "${plugin.name}" must be decorated with @Plugin`)
         }
-        return ret
+        pluginDefinition_instance.set(pluginDefinition, instance)
+        return pluginDefinition
     }
+    // 对象类型
     return plugin
 }
 
@@ -114,8 +119,13 @@ function registerPlugin(plugin: PluginDefinition | ClassType): PluginDefinition 
 
 export function implementPluginCallback<T extends keyof PluginDefinition>(type: T, ...args: Parameters<PluginDefinition[T]>) {
     const ret = []
-    for (const plugin of usingPluginSet) {
-        ret.push(plugin[type]?.(...args))
+    for (const pluginDefinition of usingPluginSet) {
+        const callback = pluginDefinition[type]
+        if (typeof callback !== 'function') {
+            continue
+        }
+        const instance = pluginDefinition_instance.get(pluginDefinition)
+        ret.push(callback.apply(instance || pluginDefinition, args))
     }
     return ret
 }

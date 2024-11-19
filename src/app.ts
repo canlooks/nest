@@ -18,7 +18,7 @@ export class Nest {
         return destructureComponentModule(a.length > 1 ? a : a[0])
     }
 
-    static use<O>(plugin: PluginDefinition<O> | ClassType, options?: O): typeof Nest {
+    static use<O>(plugin: PluginDefinition<O> | ClassType, options?: Partial<O>): typeof Nest {
         if (this.created) {
             throw Error('[@canlooks/nest] Cannot extend plugin after Nest has been created')
         }

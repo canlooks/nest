@@ -22,6 +22,8 @@ export function Controller(a: any) {
                     property_pattern.set(property, joinedPattern)
                 }
             }
+
+            implementPluginCallback('onControllerRegister')
         })
     }
     return typeof a === 'function' ? fn()(a) : fn(a)
@@ -38,7 +40,7 @@ export function Action(a?: any, b?: any, c?: any): any {
 
         descriptor.value = (...args) => {
             const finalPattern = prototype_property_pattern.get(prototype)?.get(property)!
-            return implementPluginCallback('onActionCall', finalPattern, ...args)
+            return implementPluginCallback('onActionCall', finalPattern, ...args)[0]
         }
     }
     return c ? fn()(a, b, c) : fn(a)

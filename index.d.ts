@@ -11,7 +11,7 @@ declare namespace Nest {
          * @param plugin
          * @param options
          */
-        static use<O>(plugin: PluginDefinition<O>, options?: O): typeof Nest
+        static use<O>(plugin: PluginDefinition<O>, options?: Partial<O>): typeof Nest
 
         /**
          * 创建应用
@@ -23,19 +23,11 @@ declare namespace Nest {
         static create<T extends Dict<ClassType>>(components: T): Promise<Instances<T>>
     }
 
-    /**
-     * 类修饰器，被修饰的组件当作一个模块
-     * @param component 传入单个组件
-     */
-    function Module(component: ClassType): ClassDecorator
-
     type StructuredComponents = ClassType | ClassType[] | Dict<ClassType>
 
     /**
      * 类修饰器，被修饰的组件当作一个模块
-     * @param {Array | Object} components 传入单个或数组、对象形式的组件集合，这些组件会同module组件一起初始化
-     * 对象形式可传入任意语义化键名，如
-     * @example Module( { 'user': UserComponent, 'auth': [AuthComponent, AuthComponent2] } )
+     * @param components 与模块共同注册的组件列表
      */
     function Module(components: StructuredComponents): ClassDecorator
 
@@ -46,7 +38,7 @@ declare namespace Nest {
 
     /**
      * 属性修饰器，被修饰的属性会注入对应组件的实例
-     * @param components
+     * @param component
      */
     function Inject(component: ClassType): PropertyDecorator
 
@@ -227,6 +219,7 @@ declare namespace Nest {
      */
 
     type PluginDefinition<O = any> = {
+        name?: string
         options?: O
         setOptions?(options: Partial<O>): void
         onAppCreate?(): any
