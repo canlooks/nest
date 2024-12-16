@@ -22,7 +22,7 @@ export function defineMiddleware<T extends MiddlewareFunction>(provider: T): T {
 
 /**
  * 类修饰器，被修饰的类所有方法都使用中间件
- * @param middlewares 
+ * @param middlewares
  */
 export function Consume(...middlewares: MiddlewareItem[]) {
     return (target: ClassType) => {
@@ -33,19 +33,17 @@ export function Consume(...middlewares: MiddlewareItem[]) {
             for (const p in descriptors) {
                 const {value} = descriptors[p]
                 if (typeof value === 'function') {
-                    instance[p] = {
-                        async [p](...args: any[]) {
-                            try {
-                                return value.apply(this, await filterArgs(providerQueue, args))
-                            } catch (error) {
-                                throw new Exception('[@canlooks/nest] An error occurred in middleware', {
-                                    position: `${target.name}.${p}`,
-                                    args,
-                                    error
-                                })
-                            }
+                    instance[p] = async function (...args: any[]) {
+                        try {
+                            return value.apply(this, await filterArgs(providerQueue, args))
+                        } catch (error) {
+                            throw new Exception('[@canlooks/nest] An error occurred in middleware', {
+                                position: `${target.name}.${p}`,
+                                args,
+                                error
+                            })
                         }
-                    }[p]
+                    }
                 }
             }
         })
@@ -54,7 +52,7 @@ export function Consume(...middlewares: MiddlewareItem[]) {
 
 /**
  * 方法修饰器，被修饰的方法使用中间件
- * @param middlewares 
+ * @param middlewares
  */
 export function Use(...middlewares: MiddlewareItem[]) {
     return (prototype: Object, property: string, descriptor: TypedPropertyDescriptor<any>) => {
@@ -78,7 +76,7 @@ export function Use(...middlewares: MiddlewareItem[]) {
 
 /**
  * 生成一个中间件队列
- * @param middlewares 
+ * @param middlewares
  */
 function makeProviderQueue(middlewares: MiddlewareItem[]) {
     const queue: MiddlewareFunction[] = []
@@ -108,8 +106,8 @@ function makeProviderQueue(middlewares: MiddlewareItem[]) {
 
 /**
  * 应用队列过滤args
- * @param queue 
- * @param inputArgs 
+ * @param queue
+ * @param inputArgs
  * @returns outputArgs
  */
 async function filterArgs(queue: MiddlewareFunction[], inputArgs: any[]) {
