@@ -88,19 +88,6 @@ declare namespace Nest {
     }
 
     /**
-     * 属性修饰器，注入子控制器
-     */
-    function SubController(controller: ClassType): PropertyDecorator
-    function SubController(path: string, controller: ClassType): PropertyDecorator
-    function SubController(pattern: PatternObject, controller: ClassType): PropertyDecorator
-    /**
-     * 方法修饰器，合并子控制器，不影响被修饰的方法当作Action
-     */
-    function SubController(controller: ClassType): MethodDecorator
-    function SubController(path: string, controller: ClassType): MethodDecorator
-    function SubController(pattern: PatternObject, controller: ClassType): MethodDecorator
-
-    /**
      * 调用路由中的方法
      * @param pattern 支持路径与对象模式
      * @param args 
@@ -155,22 +142,21 @@ declare namespace Nest {
      * 方法修饰器，被修饰的方法使用中间件
      * @param middlewares 
      */
-    export function Use(...middlewares: MiddlewareItem[]): MethodDecorator
+    function Use(...middlewares: MiddlewareItem[]): MethodDecorator
 
     /**
      * ----------------------------------------------------------------
      * Exception
      */
 
-    interface ExceptionCause extends Dict {
-        error?: Exception | Error | any
+    interface Exception extends Error {
+        statusCode?: number
+        code?: string
     }
 
-    class Exception extends Error {
-        static message?: string
-        cause?: ExceptionCause
-        constructor(message?: string, cause?: ExceptionCause)
-    }
+    type ExceptionConstructor = new (message?: string, info?: Dict) => Exception
+
+    const Exception: ExceptionConstructor
 
     /**
      * ----------------------------------------------------------------
@@ -192,7 +178,7 @@ declare namespace Nest {
 
     /**
      * 获取组件初始化函数的返回值
-     * @alias whenReady {@link whenReady}
+     * @alias {@link whenReady}
      * @param component 组件静态类或实例
      * @returns {Promise<any[]>} 返回一个Promise数组，因为Initialize方法可能有多个
      */
@@ -202,8 +188,8 @@ declare namespace Nest {
     function commonParameterDecorator(map: WeakMap<object, Map<PropertyKey, number>>): ParameterDecorator
 
     /** @private 获取Map的值，找不到时赋上默认值 */
-    export function getMapValue<K, V>(data: Map<K, V>, key: K, defaultValue: () => V): V
-    export function getMapValue<K extends object, V>(map: WeakMap<K, V>, key: K, defaultValue: () => V): V
+    function getMapValue<K, V>(data: Map<K, V>, key: K, defaultValue: () => V): V
+    function getMapValue<K extends object, V>(map: WeakMap<K, V>, key: K, defaultValue: () => V): V
 
     type MethodDecoratorCallback = (instance: any, ...args: any[]) => any
 
