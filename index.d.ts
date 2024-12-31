@@ -6,6 +6,7 @@ declare namespace Nest {
     }
 
     class Nest {
+        ready: Promise<any>
         /**
          * 应用插件，需要在Nest.create()之前调用
          * @param plugin

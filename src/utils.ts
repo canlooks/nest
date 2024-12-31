@@ -267,3 +267,22 @@ export function joinPattern(...patterns: Pattern[]) {
         throw TypeError('Invalid pattern')
     })
 }
+
+/**
+ * ------------------------------------------------------------------------------------------------
+ * polyfill
+ */
+
+Promise.withResolvers ||= function withResolvers<T>() {
+    if (!this) throw new TypeError("Promise.withResolvers called on non-object")
+    const out = {} as {
+        promise: Promise<T>
+        resolve: (value: T | PromiseLike<T>) => void
+        reject: (reason?: any) => void
+    }
+    out.promise = new this((resolve_, reject_) => {
+        out.resolve = resolve_
+        out.reject = reject_
+    })
+    return out
+}
