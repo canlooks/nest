@@ -6,7 +6,7 @@ declare namespace Nest {
     }
 
     class Nest {
-        ready: Promise<any>
+        ready: Promise<void>
         /**
          * 应用插件，需要在Nest.create()之前调用
          * @param plugin
@@ -42,6 +42,12 @@ declare namespace Nest {
      * @param component
      */
     function Inject(component: ClassType): PropertyDecorator
+    /**
+     * 异步注入
+     * @param load 引入组件的方法，通常为import()
+     * @example @Inject(() => import('./component'))
+     */
+    function Inject(load: () => Promise<ClassType | { default: ClassType }>): PropertyDecorator
 
     /**
      * 组件容器，用于管理组件实例
@@ -62,7 +68,7 @@ declare namespace Nest {
     type Pattern = string | PatternObject
 
     type RouteItem = {
-        children: Map<Pattern, RouteItem>
+        children?: Map<Pattern, RouteItem>
         prototype?: Object
         property?: PropertyKey
         action?(...args: any[]): any
@@ -127,11 +133,17 @@ declare namespace Nest {
 
     type MiddlewareFunction = (next: NextMethod, ...prevArgs: any[]) => any
 
+    /**
+     * 方法修饰器，定义一个中间件
+     */
     const Provide: MethodDecorator & (() => MethodDecorator)
 
-    type MiddlewareItem = MiddlewareFunction | ClassType
-
+    /**
+     * 简单函数，定义一个中间件
+     */
     function defineMiddleware<T extends MiddlewareFunction>(provider: T): T
+
+    type MiddlewareItem = MiddlewareFunction | ClassType
 
     /**
      * 类修饰器，被修饰的类所有方法都使用中间件
@@ -210,7 +222,6 @@ declare namespace Nest {
         options?: O
         setOptions?(options: Partial<O>): void
         onAppCreate?(): any
-        onControllerRegister?(): void
         onActionCall?(pattern: Pattern, ...args: any[]): any
     }
 

@@ -64,13 +64,6 @@ export function OnAppCreate(a?: any, b?: any, c?: any): any {
     return c ? decorator(a, b, c) : decorator
 }
 
-export function OnControllerRegister(prototype: Object, property: PropertyKey, descriptor: TypedPropertyDescriptor<any>): void
-export function OnControllerRegister(): MethodDecorator
-export function OnControllerRegister(a?: any, b?: any, c?: any): any {
-    const decorator = commonDefinitionDecorator('onControllerRegister')
-    return c ? decorator(a, b, c) : decorator
-}
-
 export function OnActionCall(prototype: Object, property: PropertyKey, descriptor: TypedPropertyDescriptor<any>): void
 export function OnActionCall(): MethodDecorator
 export function OnActionCall(a?: any, b?: any, c?: any): any {
@@ -121,11 +114,10 @@ export function implementPluginCallback<T extends keyof PluginDefinition>(type: 
     const ret = []
     for (const pluginDefinition of usingPluginSet) {
         const callback = pluginDefinition[type]
-        if (typeof callback !== 'function') {
-            continue
+        if (typeof callback === 'function') {
+            const instance = pluginDefinition_instance.get(pluginDefinition)
+            ret.push(callback.apply(instance || pluginDefinition, args))
         }
-        const instance = pluginDefinition_instance.get(pluginDefinition)
-        ret.push(callback.apply(instance || pluginDefinition, args))
     }
     return ret
 }

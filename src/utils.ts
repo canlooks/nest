@@ -4,9 +4,8 @@ import {Container} from './container'
 /**
  * 创建类的单例，接管new方法
  * @param Component
- * @param args 传递给MethodDecoratorCallback {@link MethodDecoratorCallback}
  */
-export function registerComponent<T>(Component: ClassType<T>, ...args: any[]): T {
+export function registerComponent<T>(Component: ClassType<T>): T {
     let instance = Container.get(Component)
     if (!instance) {
         // 所有组件均只实例化一次
@@ -14,7 +13,7 @@ export function registerComponent<T>(Component: ClassType<T>, ...args: any[]): T
         // 向容器注册组件
         Container.register(Component, instance)
         // 执行修饰器
-        implementDecorator(Component.prototype, instance, ...args)
+        implementDecorator(Component.prototype, instance)
     }
     return instance
 }
@@ -24,27 +23,29 @@ export function registerComponent<T>(Component: ClassType<T>, ...args: any[]): T
  * @param components
  */
 export async function destructureComponentModule(components: StructuredComponents) {
-    if (typeof components === 'function') {
-        // 单个组件
-        const instance = registerComponent(components)
+    const registerItem = async (component: ClassType) => {
+        const instance = registerComponent(component)
         await whenReady(instance)
         return instance
     }
 
-    // 多个组件
+    // 单个组件
+    if (typeof components === 'function') {
+        return registerItem(components)
+    }
+
+    // 多个组件（数组）
     if (Array.isArray(components)) {
-        return await Promise.all(
-            components.map(c => registerComponent(c))
-        )
+        return await Promise.all(components.map(registerItem))
     }
-    const promises: Promise<any>[] = []
+
+    // 多个组件（对象）
     const instances: Dict = {}
-    for (const k in components) {
-        const c = components[k]
-        promises.push(whenReady(c))
-        instances[k] = registerComponent(c)
-    }
-    await Promise.all(promises)
+    await Promise.all(
+        Object.keys(components).map(async k => {
+            instances[k] = await registerItem(components[k])
+        })
+    )
     return instances
 }
 
@@ -65,17 +66,17 @@ export function registerDecorator(prototype: object, callback: MethodDecoratorCa
  * 执行方法修饰器
  * @param prototype
  * @param instance
- * @param args 传递给MethodDecoratorCallback {@link MethodDecoratorCallback}
  */
-export function implementDecorator(prototype: object, instance: any, ...args: any[]): void {
+export function implementDecorator(prototype: object, instance: any): void {
     const registeredMethods = prototype_registeredMethods.get(prototype)
     if (registeredMethods) {
         for (let i = 0, {length} = registeredMethods; i < length; i++) {
-            registeredMethods[i](instance, ...args)
+            registeredMethods[i](instance)
         }
     }
 }
 
+export const instance_pendingInjecting = new WeakMap<object, void[]>()
 export const instance_pendingInitialising = new WeakMap<object, any[]>()
 
 /**
@@ -83,16 +84,17 @@ export const instance_pendingInitialising = new WeakMap<object, any[]>()
  * @param component
  * @returns {Promise<any[]>} 返回一个数组，因为Initialize方法可能有多个
  */
-export function whenReady(component: ClassType | object): Promise<any[]> {
+export async function whenReady(component: ClassType | object): Promise<any[]> {
     const instance = typeof component === 'function'
         ? registerComponent(component as ClassType)
         : component
-    return Promise.all(instance_pendingInitialising.get(instance) || [])
+    await Promise.all(instance_pendingInjecting.get(instance) || [])
+    return await Promise.all(instance_pendingInitialising.get(instance) || [])
 }
 
 /**
  * 获取组件初始化函数的返回值
- * @alias whenReady {@link whenReady}
+ * @alias {@link whenReady}
  * @param component
  */
 export function getInitialValue(component: ClassType | object) {
@@ -274,7 +276,7 @@ export function joinPattern(...patterns: Pattern[]) {
  */
 
 Promise.withResolvers ||= function withResolvers<T>() {
-    if (!this) throw new TypeError("Promise.withResolvers called on non-object")
+    if (!this) throw new TypeError('Promise.withResolvers called on non-object')
     const out = {} as {
         promise: Promise<T>
         resolve: (value: T | PromiseLike<T>) => void

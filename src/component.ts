@@ -1,5 +1,5 @@
 import {ClassType} from '..'
-import {instance_pendingInitialising, getMapValue, registerComponent, registerDecorator} from './utils'
+import {instance_pendingInitialising, instance_pendingInjecting, getMapValue, registerComponent, registerDecorator, isClass} from './utils'
 
 /**
  * 方法修饰器，被修饰的方法会在组件初始化时执行
@@ -20,10 +20,23 @@ export function Initialize(a?: any, b?: any, c?: any) {
 /**
  * 属性修饰器，被修饰的属性会注入对应组件的实例
  */
-export function Inject(component: ClassType) {
+export function Inject(component: ClassType): PropertyDecorator
+export function Inject(load: () => Promise<ClassType | { default: ClassType }>): PropertyDecorator
+export function Inject(a: any) {
     return (prototype: Object, property: PropertyKey) => {
         registerDecorator(prototype, instance => {
-            instance[property] = registerComponent(component)
+            if (isClass(a)) {
+                instance[property] = registerComponent(a)
+                return
+            }
+            const pending = a().then((loaded: any) => {
+                instance[property] = registerComponent(
+                    typeof loaded === 'object' && loaded?.default
+                        ? loaded.default
+                        : loaded
+                )
+            })
+            getMapValue(instance_pendingInjecting, instance, () => []).push(pending)
         })
     }
 }

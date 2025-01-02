@@ -1,13 +1,19 @@
-const resolvers = Promise.withResolvers()
+@ClassDec
+class Test {
+    @MethodDec
+    method(@ParamDec a: any) {
 
-Promise.all([
-    (() => {
-        return new Promise<string>(resolve => {
-            setTimeout(resolve, 1000, 'success')
-        })
-    })()
-]).then(resolvers.resolve)
+    }
+}
 
-resolvers.promise.then(res => {
-    console.log(12, res)
-})
+function ClassDec(target: any) {
+    console.log('class')
+}
+
+function MethodDec(target: any, propertyKey: string, descriptor: PropertyDescriptor) {
+    console.log('method')
+}
+
+function ParamDec(target: any, propertyKey: string, index: number) {
+    console.log('param')
+}

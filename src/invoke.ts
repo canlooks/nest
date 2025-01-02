@@ -60,7 +60,7 @@ export function findMatchedRoute(pattern: Pattern): MatchedRoute {
                 }
 
                 subPath = truncatePath(referencePath, path)
-                if (routeItem.children.size) {
+                if (routeItem.children?.size) {
                     if (subPath !== null) {
                         // 有子路由，只要subPath不为null均可匹配成功
                         matchedRoute = routeItem
@@ -74,7 +74,7 @@ export function findMatchedRoute(pattern: Pattern): MatchedRoute {
             }
 
             // 匹配到的路由存在子路由，并且存在剩余的subPath，则继续递归匹配
-            return matchedRoute?.children.size && subPath
+            return matchedRoute?.children?.size && subPath
                 ? fn(matchedRoute!.children, subPath!)
                 : matchedRoute
         }
@@ -97,7 +97,7 @@ export function findMatchedRoute(pattern: Pattern): MatchedRoute {
                 }
                 const restObj = shallowContain(referenceObj, obj)
                 if (restObj) {
-                    return Object.keys(restObj).length && routeItem.children.size
+                    return Object.keys(restObj).length && routeItem.children?.size
                         ? fn(routeItem.children, restObj)
                         : routeItem
                 }

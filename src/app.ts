@@ -4,7 +4,7 @@ import {destructureComponentModule} from './utils'
 
 export class Nest {
     private static created = false
-    private static resolvers = Promise.withResolvers<any>()
+    private static resolvers = Promise.withResolvers<void>()
 
     static get ready() {
         if (!this.created) {
@@ -21,20 +21,25 @@ export class Nest {
         return this
     }
 
-    static create<T>(component: ClassType<T>): Promise<T>
-    static create<T extends ClassType[]>(components: T): Promise<Instances<T>>
-    static create<T extends ClassType[]>(...components: T): Promise<Instances<T>>
-    static create<T extends Dict<ClassType>>(components: T): Promise<Instances<T>>
-    static create(...a: any[]) {
+    static async create<T>(component: ClassType<T>): Promise<T>
+    static async create<T extends ClassType[]>(components: T): Promise<Instances<T>>
+    static async create<T extends ClassType[]>(...components: T): Promise<Instances<T>>
+    static async create<T extends Dict<ClassType>>(components: T): Promise<Instances<T>>
+    static async create(...a: any[]) {
         if (this.created) {
             throw Error('[@canlooks/nest] Cannot run create() twice')
         }
         this.created = true
 
-        Promise.all(implementPluginCallback('onAppCreate'))
-            .then(([res]) => this.resolvers.resolve(res))
-            .catch(this.resolvers.reject)
-
-        return destructureComponentModule(a.length > 1 ? a : a[0])
+        try {
+            const [instances] = await Promise.all([
+                destructureComponentModule(a.length > 1 ? a : a[0]),
+                ...implementPluginCallback('onAppCreate')
+            ])
+            this.resolvers.resolve()
+            return instances
+        } catch (e) {
+            this.resolvers.reject(e)
+        }
     }
 }

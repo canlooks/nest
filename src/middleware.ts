@@ -4,6 +4,9 @@ import {getAllPropertyDescriptors, getMapValue, isClass, registerComponent, regi
 
 const instance_middlewareProviderSet = new Map<Function, Set<MiddlewareFunction>>()
 
+/**
+ * 方法修饰器，定义一个中间件函数
+ */
 export function Provide(): MethodDecorator
 export function Provide(prototype: Object, property: PropertyKey, descriptor: TypedPropertyDescriptor<MiddlewareFunction>): void
 export function Provide(a?: any, b?: any, c?: any): any {
@@ -16,6 +19,9 @@ export function Provide(a?: any, b?: any, c?: any): any {
     return c ? fn(a, b, c) : fn
 }
 
+/**
+ * 定义一个中间件函数
+ */
 export function defineMiddleware<T extends MiddlewareFunction>(provider: T): T {
     return provider
 }
@@ -33,9 +39,9 @@ export function Consume(...middlewares: MiddlewareItem[]) {
             for (const p in descriptors) {
                 const {value} = descriptors[p]
                 if (typeof value === 'function') {
-                    instance[p] = async function (...args: any[]) {
+                    instance[p] = async (...args: any[]) => {
                         try {
-                            return value.apply(this, await filterArgs(providerQueue, args))
+                            return value.apply(instance, await filterArgs(providerQueue, args))
                         } catch (error) {
                             throw new Exception('[@canlooks/nest] An error occurred in middleware', {
                                 position: `${target.name}.${p}`,
@@ -58,19 +64,17 @@ export function Use(...middlewares: MiddlewareItem[]) {
     return (prototype: Object, property: string, descriptor: TypedPropertyDescriptor<any>) => {
         const providerQueue = makeProviderQueue(middlewares)
         const {value} = descriptor
-        descriptor.value = {
-            async [property](...args: any[]) {
-                try {
-                    return value.apply(this, await filterArgs(providerQueue, args))
-                } catch (error) {
-                    throw new Exception('[@canlooks/nest] An error occurred in middleware', {
-                        position: `${prototype.constructor.name}.${property}`,
-                        args,
-                        error
-                    })
-                }
+        descriptor.value = async function (...args: any[]) {
+            try {
+                return value.apply(this, await filterArgs(providerQueue, args))
+            } catch (error) {
+                throw new Exception('[@canlooks/nest] An error occurred in middleware', {
+                    position: `${prototype.constructor.name}.${property}`,
+                    args,
+                    error
+                })
             }
-        }[property]
+        }
     }
 }
 
@@ -83,12 +87,6 @@ function makeProviderQueue(middlewares: MiddlewareItem[]) {
     const middlewareSet = new Set(middlewares)
     const fn = (set: Set<MiddlewareItem>) => {
         for (const item of set) {
-            if (isClass(item)) {
-                const instance = registerComponent(item)
-                if (!instance) {
-                    throw new Error(`No provider in middleware class "${item.name}"`)
-                }
-            }
             const itemInstance = isClass(item) && registerComponent(item as ClassType)
             if (itemInstance) {
                 // 能在容器中找到实例，说明item为ClassType
