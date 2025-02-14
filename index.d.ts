@@ -84,6 +84,11 @@ declare namespace Nest {
         (pattern?: PatternObject): ClassDecorator
     }
 
+    /** @private */
+    const CONTROLLER_PATTERN: symbol
+    /** @private */
+    const PROPERTY_PATTERN: symbol
+
     /**
      * 方法修饰器，生成一个路由方法
      * @param path 路径模式，默认为函数名作为路径
@@ -173,6 +178,38 @@ declare namespace Nest {
 
     /**
      * ----------------------------------------------------------------
+     * plugin
+     */
+
+    type PluginDefinition<O = any> = {
+        name?: string
+        options?: O
+        setOptions?(options: Partial<O>): void
+        onAppCreate?(): any
+        onActionCall?(pattern: Pattern, ...args: any[]): any
+    }
+
+    /**
+     * 使用函数形式定义插件
+     * @param plugin
+     */
+    function definePlugin<O>(plugin: PluginDefinition<O>): PluginDefinition<O>
+
+    /**
+     * 类修饰器，被修饰的类作为插件
+     */
+    const Plugin: ClassDecorator & (() => ClassDecorator)
+
+    /**
+     * 属性修饰器，被修饰的属性作为插件选项
+     */
+    const Options: PropertyDecorator & (() => PropertyDecorator)
+
+    const SetOptions: MethodDecorator & (() => MethodDecorator)
+    const OnAppCreate: MethodDecorator & (() => MethodDecorator)
+
+    /**
+     * ----------------------------------------------------------------
      * utils
      */
 
@@ -204,6 +241,18 @@ declare namespace Nest {
     function getMapValue<K, V>(data: Map<K, V>, key: K, defaultValue: () => V): V
     function getMapValue<K extends object, V>(map: WeakMap<K, V>, key: K, defaultValue: () => V): V
 
+    /**
+     * @private 得到所有属性的描述符，包括被继承的父类
+     * @param o
+     */
+    function getAllPropertyDescriptors(o: any): { [p: PropertyKey]: PropertyDescriptor }
+
+    /**
+     * @private 合并pattern
+     * @param patterns
+     */
+    function joinPattern(...patterns: Pattern[]): Pattern
+
     type MethodDecoratorCallback = (instance: any, ...args: any[]) => any
 
     /** @private 注册方法修饰器 */
@@ -211,39 +260,6 @@ declare namespace Nest {
 
     /** @private 截断路径 */
     function truncatePath(path: string, truncate: string): string
-
-    /**
-     * ----------------------------------------------------------------
-     * plugin
-     */
-
-    type PluginDefinition<O = any> = {
-        name?: string
-        options?: O
-        setOptions?(options: Partial<O>): void
-        onAppCreate?(): any
-        onActionCall?(pattern: Pattern, ...args: any[]): any
-    }
-
-    /**
-     * 使用函数形式定义插件
-     * @param plugin 
-     */
-    function definePlugin<O>(plugin: PluginDefinition<O>): PluginDefinition<O>
-
-    /**
-     * 类修饰器，被修饰的类作为插件
-     */
-    const Plugin: ClassDecorator & (() => ClassDecorator)
-
-    /**
-     * 属性修饰器，被修饰的属性作为插件选项
-     */
-    const Options: PropertyDecorator & (() => PropertyDecorator)
-
-    const SetOptions: MethodDecorator & (() => MethodDecorator)
-    const OnAppCreate: MethodDecorator & (() => MethodDecorator)
-    const OnControllerRegister: MethodDecorator & (() => MethodDecorator)
 }
 
 export = Nest

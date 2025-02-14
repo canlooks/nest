@@ -81,7 +81,14 @@ const usingPluginSet = new Set<PluginDefinition>()
 export function usePlugin<O>(plugin: PluginDefinition<O> | ClassType, options?: Partial<O>) {
     const pluginDefinition = registerPlugin(plugin)
     usingPluginSet.add(pluginDefinition)
-    options && pluginDefinition.setOptions?.(options)
+    if (options) {
+        if (pluginDefinition.setOptions) {
+            pluginDefinition.setOptions(options)
+        } else {
+            pluginDefinition.options ||= {}
+            Object.assign(pluginDefinition.options, options)
+        }
+    }
 }
 
 const pluginDefinition_instance = new WeakMap<PluginDefinition, any>()
