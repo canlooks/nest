@@ -76,7 +76,7 @@ export function implementDecorator(prototype: object, instance: any): void {
     }
 }
 
-export const instance_pendingInjecting = new WeakMap<object, void[]>()
+export const instance_pendingInjecting = new WeakMap<object, any[]>()
 export const instance_pendingInitialising = new WeakMap<object, any[]>()
 
 /**

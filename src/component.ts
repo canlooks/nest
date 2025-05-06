@@ -29,7 +29,7 @@ export function Inject(a: any) {
                 instance[property] = registerComponent(a)
                 return
             }
-            const pending = a().then((loaded: any) => {
+            const pending = Promise.resolve(a()).then((loaded: any) => {
                 instance[property] = registerComponent(
                     typeof loaded === 'object' && loaded?.default
                         ? loaded.default
