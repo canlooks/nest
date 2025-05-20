@@ -36,14 +36,15 @@
   },
   "scripts": {
     "clean": "npx shx rm -rf dist",
-    "build": "npm run clean && tscup",
-    "test": "ts-node test/test.ts"
+    "build": "tsc -m esnext --outDir dist/esm & tsc -m commonjs --outDir dist/cjs",
+    "rebuild": "npm run clean && npm run build",
+    "test": "node --loader ts-node/esm test/test.mts"
   },
   "dependencies": {
     "tslib": "^2.8.1"
   },
   "devDependencies": {
-    "@canlooks/tscup": "^0.1.2",
+    "@types/node": "^22.15.19",
     "typescript": "^5.7.2"
   }
 }

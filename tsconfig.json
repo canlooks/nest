@@ -1,8 +1,7 @@
 {
   "compilerOptions": {
     "target": "ESNext",
-    "outDir": "dist",
-    "moduleResolution": "Node10",
+    "moduleResolution": "node",
     "importHelpers": true,
     "esModuleInterop": true,
     "strict": true,
