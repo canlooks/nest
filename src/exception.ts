@@ -1,5 +1,5 @@
 /**
- * @example
+ * @example1
  * class MyException extends Exception {
  *     statusCode = 500
  *     code = 'Server Error'
@@ -7,6 +7,13 @@
  * }
  *
  * throw new MyException()
+ *
+ * @example2
+ * throw new Exception('服务器内部错误', {
+ *     statusCode: 500,
+ *     code: 'Server Error',
+ *     other: 'any error info'
+ * })
  */
 
 export class Exception extends Error {
